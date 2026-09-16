@@ -1,0 +1,20 @@
+{
+  "name": "gsulamanidze-skills",
+  "owner": {
+    "name": "George Sulamanidze",
+    "url": "https://github.com/gsulamanidzebdoge"
+  },
+  "plugins": [
+    {
+      "name": "1c-developer",
+      "source": "./",
+      "displayName": "1C Developer",
+      "description": "Expert 1C:Enterprise 8.3 (1С:Предприятие) developer and architect: BSL, query language, managed forms, posting, locks, extensions, integration and .erf/.epf/.cf/.cfe source conversion. Explains, plans and reviews in Georgian.",
+      "version": "1.1.0",
+      "license": "MIT",
+      "homepage": "https://github.com/gsulamanidzebdoge/1c-developer",
+      "repository": "https://github.com/gsulamanidzebdoge/1c-developer",
+      "keywords": ["1c", "1c-enterprise", "bsl", "erp", "georgian", "code-review"]
+    }
+  ]
+}

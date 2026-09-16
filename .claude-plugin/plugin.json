@@ -1,0 +1,13 @@
+{
+  "name": "1c-developer",
+  "displayName": "1C Developer",
+  "version": "1.1.0",
+  "description": "Expert 1C:Enterprise 8.3 (1С:Предприятие) developer and architect. Writes standard-compliant BSL, reviews code, and converts .erf/.epf/.cf/.cfe to XML source — explaining in Georgian.",
+  "author": {
+    "name": "George Sulamanidze",
+    "url": "https://github.com/gsulamanidzebdoge"
+  },
+  "homepage": "https://github.com/gsulamanidzebdoge/1c-developer",
+  "license": "MIT",
+  "keywords": ["1c", "1c-enterprise", "bsl", "erp", "georgian"]
+}
