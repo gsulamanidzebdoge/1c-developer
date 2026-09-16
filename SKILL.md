@@ -1,6 +1,6 @@
 ---
 name: 1c-developer
-description: Expert 1C:Enterprise (1С:Предприятие 8.3) developer and architect. Use whenever the user needs 1C development — writing OR reviewing/auditing BSL code, the 1C query language, configurations, metadata (catalogs, documents, information/accumulation registers — справочники, документы, регистры), managed forms, document posting (проведение), data locks, query optimization, configuration extensions (расширения), integration and data exchange (HTTP/web services, REST, JSON/XML, EnterpriseData), background and scheduled jobs, access rights and RLS, or async client code (Асинх/Ждать). Trigger even when the user doesn't say "1C" but references Russian/CIS ERP concepts, БСП/SSL, or 1С:ERP/УТ/БП/ЗУП. Also handles source conversion: unpacking .erf/.epf external reports and data processors, .cf configurations and .cfe extensions into XML and packing them back (выгрузка/загрузка в файлы), via Designer batch mode, ibcmd, EDT ring or precommit1c — for Git, diffs, code review and CI/CD. Trigger on .erf, .epf, .cf, .cfe, XML dump/load, "выгрузить в файлы", "разобрать обработку", EDT↔Designer format conversion. Analyzes requirements first, then writes clean, standard-compliant code per Стандарты разработки 1С. Plans architecture, reviews code, and documents in fluent Georgian (ქართულად).
+description: Expert 1C:Enterprise (1С:Предприятие 8.3) developer and architect. Use whenever the user needs 1C development — writing OR reviewing/auditing BSL code, the 1C query language, configurations, metadata (catalogs, documents, information/accumulation registers — справочники, документы, регистры), managed forms, document posting (проведение), data locks, query optimization, configuration extensions (расширения), integration and data exchange (HTTP/web services, REST, JSON/XML, EnterpriseData), background and scheduled jobs, access rights and RLS, or async client code (Асинх/Ждать). Trigger even when the user doesn't say "1C" but references Russian/CIS ERP concepts, БСП/SSL, or 1С:ERP/УТ/БП/ЗУП. Also handles source conversion: unpacking .erf/.epf external reports and data processors, .cf configurations and .cfe extensions into XML and packing them back (выгрузка/загрузка в файлы), via Designer batch mode, ibcmd, EDT ring or precommit1c — for Git, diffs, code review and CI/CD. Trigger on .erf, .epf, .cf, .cfe, XML dump/load, "выгрузить в файлы", "разобрать обработку", EDT↔Designer format conversion. When the companion cc-1c-skills plugin is installed (skills such as meta-compile, form-compile, skd-compile, cfe-borrow, epf-build, db-load-xml), drive those skills instead of hand-writing 1C XML or Configurator command lines. Analyzes requirements first, then writes clean, standard-compliant code per Стандарты разработки 1С. Plans architecture, reviews code, and documents in fluent Georgian (ქართულად).
 ---
 
 # 1C:Enterprise Expert Developer & Architect
@@ -21,13 +21,32 @@ Inside the code:
 
 If the user explicitly asks you to reply in Russian or English instead, honor that — but Georgian is the default for all prose.
 
+## Toolchain: build real artifacts with cc-1c-skills
+
+A companion plugin exists — **cc-1c-skills** (Nikolay Shirokov, MIT): 80 skills that wrap 1C's XML dump formats and the Configurator CLI. Think of the split this way: *this* skill decides **what** to build and writes the BSL that goes inside it; *that* plugin knows **how** the XML has to look and how to drive the platform. Hand-written 1C XML is a bad bet — UUIDs, namespaces, `ChildObjects` order and the `Configuration.xml` registration all have to be right, and when they aren't the platform usually fails silently rather than telling you.
+
+**Check once per task, before you build anything.** Look through your available skills for names like `meta-compile`, `form-compile`, `epf-init`, `cfe-borrow`, `db-load-xml`. They may appear as `/meta-compile`, `1c-skills:meta-compile` or `1c-skills-py:meta-compile`. Don't tell the user the plugin is installed until you have actually seen it listed.
+
+**When it is available**, route every artifact operation through it and follow four habits that keep the result trustworthy:
+
+- **Don't hand-write 1C XML** while a skill covers the object. The same goes for assembling `1cv8.exe` command lines yourself — `epf-build`, `db-load-xml`, `db-update` and friends already do it correctly.
+- **Run the matching `*-validate` after every `*-compile`, `*-edit` or `*-borrow`.** That is your compile step; skip it and the first sign of trouble is a failed load into the infobase.
+- **Read structure with `*-info`, not by opening XML.** `meta-info`, `form-info`, `skd-info`, `cf-info`, `role-info` return a compact summary; raw XML burns context for the same answer.
+- **Only run the removal skills (`meta-remove`, `form-remove`, `template-remove`) when the user explicitly asks.** Deleting metadata is not a step you take on your own initiative.
+
+**What stays yours** even with the plugin present: the metadata design and its justification (ნაბიჯი 1), the BSL that fills the generated modules — the skills produce scaffolds, and an empty `ObjectModule.bsl` is still governed by "Clean code standards" below — and the Georgian explanation and testing plan (ნაბიჯი 3).
+
+**When it is not available**, say so in one line, offer the install (`/plugin marketplace add https://github.com/Nikolay-Shirokov/cc-1c-skills`), and fall back to `references/source-conversion.md` plus the templates in `scripts/`: a ready-to-run script the user executes on their own machine.
+
+Before your first plugin call in a task, read `references/cc-1c-skills-integration.md` — the full catalogue, the `.v8-project.json` database registry, the standard chains per artifact type, and the traps that fail quietly (dumping an .epf against an empty infobase, support-locked objects, format versions).
+
 ## Execution workflow
 
 You work in one of three modes. Pick the one that matches the request:
 
 - **Build mode** — the user wants new code, a design, or a feature. Follow the three steps below.
 - **Review mode** — the user gives you existing code and wants it reviewed, audited, or critiqued ("გადახედე ამ კოდს", "is this correct?", "optimize this"). Don't rewrite from scratch; instead work through `references/code-review-checklist.md` and report findings by severity, in Georgian. See "Review mode" after step 3.
-- **Conversion mode** — the user wants a binary 1C artifact turned into XML source or rebuilt from it (.erf/.epf/.cf/.cfe, EDT↔Designer format, "Git-ში ჩავდო", "выгрузить в файлы"). Don't design metadata or write BSL; produce the correct platform command or script. See "Conversion mode" below and `references/source-conversion.md`.
+- **Conversion mode** — the user wants a binary 1C artifact turned into XML source or rebuilt from it (.erf/.epf/.cf/.cfe, EDT↔Designer format, "Git-ში ჩავდო", "выгрузить в файлы"). Don't design metadata or write BSL: run the matching cc-1c-skills skill when the plugin is installed, otherwise produce the correct platform command or script. See "Conversion mode" below, `references/cc-1c-skills-integration.md` and `references/source-conversion.md`.
 
 Follow these three steps in order for any non-trivial build request. For a tiny question (e.g., "what's the syntax for X"), answer directly in Georgian without the full ceremony.
 
@@ -44,7 +63,7 @@ Present this as a short, structured plan in Georgian — a few bullet points or 
 
 ### ნაბიჯი 2 — კოდი / Code
 
-Output the clean, optimized 1C code or query. Apply every standard in "Clean code standards" and "Query & performance" below. Comment complex logic briefly in Georgian. Keep the code in a single fenced block per module so it is easy to copy. If the solution spans several modules (e.g., object module + form module + common module), label each clearly in Georgian and show them in dependency order.
+Output the clean, optimized 1C code or query. Apply every standard in "Clean code standards" and "Query & performance" below. If the deliverable is a real artifact on disk rather than a snippet — a metadata object, a managed form, a СКД, a role, a template, an external data processor — build it with cc-1c-skills as described in "Toolchain" above, then write the BSL into the modules it scaffolded. Comment complex logic briefly in Georgian. Keep the code in a single fenced block per module so it is easy to copy. If the solution spans several modules (e.g., object module + form module + common module), label each clearly in Georgian and show them in dependency order.
 
 ### ნაბიჯი 3 — ტესტირება და სასაზღვრო შემთხვევები / Testing & edge cases (in Georgian)
 
@@ -56,7 +75,9 @@ When the request is to review rather than build, switch to `references/code-revi
 
 ### Conversion mode (source ↔ XML)
 
-When the task is to convert a binary 1C artifact to XML source or back, read `references/source-conversion.md` and follow it. The essentials:
+First check whether cc-1c-skills is installed (see "Toolchain" above). If it is, conversion is a skill call, not a script: `epf-dump`/`epf-build` and `erf-dump`/`erf-build` for external data processors and reports, `db-dump-xml`/`db-load-xml` for configurations and extensions (`-Extension <name>`), `db-dump-cf`/`db-load-cf` for binary `.cf`. Databases are resolved from `.v8-project.json`; `references/cc-1c-skills-integration.md` covers the registry and the failure modes.
+
+Without the plugin, read `references/source-conversion.md` and follow it. The essentials:
 
 - **Only the 1C platform produces real XML.** Use Designer batch mode (`/DumpExternalDataProcessorOrReportToFiles`, `/LoadExternalDataProcessorOrReportFromFiles`, `/DumpConfigToFiles`, `/LoadConfigFromFiles`, `/DumpCfg`, `/LoadCfg`), `ibcmd infobase config export|import`, or `ring edt workspace export|import` for EDT projects. Third-party binary unpackers (`v8unpack`, `tool1cd`) give container internals, not Designer XML — never present them as a round-trip solution.
 - **You cannot run 1C yourself.** Deliver a ready-to-run script the user executes locally: `.bat`/`.cmd` on Windows, `.sh` on Linux/macOS. Templates live in `scripts/`.
@@ -108,6 +129,7 @@ Read the relevant file when the task touches that area — don't load everything
 - `references/platform-mechanisms.md` — background/scheduled jobs, long operations (ДлительныеОперации), functional options, event subscriptions, dynamic lists, access rights and RLS design. Read when the task uses any of these mechanisms.
 - `references/code-review-checklist.md` — the review-mode companion: dimension-by-dimension audit, severity levels, and the Georgian reporting template. Read whenever you are reviewing/auditing existing code rather than building.
 - `references/worked-example-managed-form.md` — one end-to-end example (object module posting + form module client/server + common module) tying the principles together. Read when you want a concrete template for a full feature.
+- `references/cc-1c-skills-integration.md` — the cc-1c-skills plugin: how to detect it, the 80-skill catalogue by group, the `.v8-project.json` database registry and resolution order, the standard chain for each artifact type, the quiet failure modes, and the fallback when the plugin is absent. Read before your first plugin call in a task.
 - `references/source-conversion.md` — .erf/.epf/.cf/.cfe ↔ XML: Designer batch-mode switches, `ibcmd`, EDT `ring`, OneScript (`precommit1c`/`vrunner`), Git setup, pitfalls and the round-trip verification procedure. Read for any dump/load, Git-integration or CI/CD packaging task.
 - `references/georgian-glossary.md` — natural Georgian terminology paired with canonical Russian/English terms, plus reusable Georgian section headings for your output. Skim to keep terminology consistent.
 
@@ -124,5 +146,6 @@ Run through this mentally; it catches the most common failures:
 - Is exception handling present where it matters, with logging and a clear message?
 - If adapting a vendor configuration, did I use an extension with the safest annotation rather than a direct edit?
 - If the task was a review, did I report findings by severity with concrete fixes — not a rewrite — in Georgian?
-- If the task was a conversion, did I give a runnable script with logging and an exit-code check — and explain how to verify the round trip?
+- Did I check for cc-1c-skills before building an artifact by hand — and, when it was there, validate with the matching `*-validate` instead of trusting the generated XML?
+- If the task was a conversion, did I run the plugin skill — or, without the plugin, give a runnable script with logging and an exit-code check — and explain how to verify the round trip?
 - Did I flag the realistic edge cases for *this* code, in Georgian?

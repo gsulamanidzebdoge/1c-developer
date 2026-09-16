@@ -14,6 +14,18 @@
 - **Review mode** — არსებული კოდის აუდიტი `references/code-review-checklist.md`-ის მიხედვით: კორექტულობა → კონკურენტულობა → წარმადობა → სტანდარტები → უსაფრთხოება → ლოკალიზაცია. შედეგი სიმძიმის დონეებად დაჯგუფებული: 🔴 კრიტიკული / 🟠 მნიშვნელოვანი / 🟡 მცირე / 🟢 რეკომენდაცია.
 - **Conversion mode** — ბინარული 1C ფაილის (`.erf`, `.epf`, `.cf`, `.cfe`) XML-ად დაშლა და უკან აწყობა Git-ისთვის, diff-ისთვის, code review-სა და CI/CD-ისთვის: Designer-ის პაკეტური რეჟიმი, `ibcmd`, EDT `ring`, OneScript. შედეგი — მზა, გასაშვები სკრიპტი ლოგირებით, exit-code-ის შემოწმებით და round-trip გადამოწმების ინსტრუქციით.
 
+### ინსტრუმენტარიუმი: cc-1c-skills
+
+სქილი იცნობს [cc-1c-skills](https://github.com/Nikolay-Shirokov/cc-1c-skills) პლაგინს (Nikolay Shirokov, MIT — 80 სქილი 1C-ის XML-ფორმატებისა და კონფიგურატორის CLI-ზე) და, როცა ის დაინსტალირებულია, **რეალურ არტეფაქტებს მისი სქილებით აგებს** — არ წერს XML-ს ხელით და არ აწყობს `1cv8.exe`-ის ბრძანებებს თვითონ.
+
+შრომის განაწილება ასეთია: **cc-1c-skills** აგებს არტეფაქტის მექანიკას (UUID-ები, namespace-ები, `Configuration.xml`-ში რეგისტრაცია, პლატფორმის გაშვება), **`1c-developer`** — მეტამონაცემების დიზაინს, მოდულებში ჩაწერილ BSL-ს, ქართულ ახსნას და ტესტირების გეგმას. პლაგინის გარეშე სქილი არსებულ რეჟიმში აგრძელებს — აძლევს მზა, გასაშვებ სკრიპტს.
+
+```
+/plugin marketplace add https://github.com/Nikolay-Shirokov/cc-1c-skills
+/plugin install 1c-skills@cc-1c-skills        # PowerShell (Windows)
+/plugin install 1c-skills-py@cc-1c-skills     # Python
+```
+
 ### ენობრივი წესი
 
 - **მთელი პროზა — ქართულად:** გეგმები, ახსნები, trade-off-ების განხილვა, ტესტირების ინსტრუქციები.
@@ -32,6 +44,7 @@
 | [`references/integration-and-exchange.md`](references/integration-and-exchange.md) | HTTP/web სერვისები, REST, JSON/XML/XDTO, EnterpriseData, გაცვლის გეგმები, იდემპოტენტურობა |
 | [`references/platform-mechanisms.md`](references/platform-mechanisms.md) | ფონური და რეგლამენტური დავალებები, `ДлительныеОперации`, ფუნქციონალური ოფციები, დინამიკური სიები, უფლებები და RLS |
 | [`references/code-review-checklist.md`](references/code-review-checklist.md) | Review-რეჟიმის სრული ჩეკლისტი და ქართული ანგარიშის შაბლონი |
+| [`references/cc-1c-skills-integration.md`](references/cc-1c-skills-integration.md) | cc-1c-skills პლაგინი: აღმოჩენა, 80 სქილის კატალოგი, `.v8-project.json` რეესტრი, ტიპური ჯაჭვები, ხაფანგები და fallback |
 | [`references/source-conversion.md`](references/source-conversion.md) | `.erf`/`.epf`/`.cf`/`.cfe` ↔ XML: Designer-ის პაკეტური რეჟიმის გასაღებები, `ibcmd`, EDT `ring`, `precommit1c`/`vrunner`, Git-ის კონფიგურაცია, ხაფანგები და round-trip ტესტი |
 | [`references/worked-example-managed-form.md`](references/worked-example-managed-form.md) | სრული end-to-end მაგალითი: ობიექტის მოდული + მართვადი ფორმა + საერთო მოდული |
 | [`references/georgian-glossary.md`](references/georgian-glossary.md) | ქართული ტერმინოლოგია რუსული/ინგლისური კანონიკური ტერმინების გვერდით |

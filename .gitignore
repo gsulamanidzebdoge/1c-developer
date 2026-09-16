@@ -16,3 +16,6 @@ $RECYCLE.BIN/
 
 # Claude Code local state
 .claude/settings.local.json
+
+# Cowork-ის ჩატიდან ჩამოსული ფაილები
+Claude outputs/
