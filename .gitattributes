@@ -1,0 +1,7 @@
+# .bat უნდა იყოს CRLF — LF-ით cmd.exe არასწორად პარსავს (`>nul` იშლება)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+# shell-სკრიპტები LF — CRLF-ით `bad interpreter` შეცდომას იძლევა
+*.sh  text eol=lf
+# ბანდლი ბინარულია — git-მა არ შეეხოს
+*.skill binary

@@ -8,10 +8,11 @@
 
 ## რას აკეთებს
 
-სქილი ორ რეჟიმში მუშაობს:
+სქილი სამ რეჟიმში მუშაობს:
 
 - **Build mode** — ახალი ფუნქციონალის/კოდის შექმნა სამ ნაბიჯად: **ანალიზი და არქიტექტურა → კოდი → ტესტირება და სასაზღვრო შემთხვევები**. მეტამონაცემების დიზაინი (справочник / документ / регистр) კოდის დაწერამდე განიხილება და ასაბუთდება.
 - **Review mode** — არსებული კოდის აუდიტი `references/code-review-checklist.md`-ის მიხედვით: კორექტულობა → კონკურენტულობა → წარმადობა → სტანდარტები → უსაფრთხოება → ლოკალიზაცია. შედეგი სიმძიმის დონეებად დაჯგუფებული: 🔴 კრიტიკული / 🟠 მნიშვნელოვანი / 🟡 მცირე / 🟢 რეკომენდაცია.
+- **Conversion mode** — ბინარული 1C ფაილის (`.erf`, `.epf`, `.cf`, `.cfe`) XML-ად დაშლა და უკან აწყობა Git-ისთვის, diff-ისთვის, code review-სა და CI/CD-ისთვის: Designer-ის პაკეტური რეჟიმი, `ibcmd`, EDT `ring`, OneScript. შედეგი — მზა, გასაშვები სკრიპტი ლოგირებით, exit-code-ის შემოწმებით და round-trip გადამოწმების ინსტრუქციით.
 
 ### ენობრივი წესი
 
@@ -31,6 +32,7 @@
 | [`references/integration-and-exchange.md`](references/integration-and-exchange.md) | HTTP/web სერვისები, REST, JSON/XML/XDTO, EnterpriseData, გაცვლის გეგმები, იდემპოტენტურობა |
 | [`references/platform-mechanisms.md`](references/platform-mechanisms.md) | ფონური და რეგლამენტური დავალებები, `ДлительныеОперации`, ფუნქციონალური ოფციები, დინამიკური სიები, უფლებები და RLS |
 | [`references/code-review-checklist.md`](references/code-review-checklist.md) | Review-რეჟიმის სრული ჩეკლისტი და ქართული ანგარიშის შაბლონი |
+| [`references/source-conversion.md`](references/source-conversion.md) | `.erf`/`.epf`/`.cf`/`.cfe` ↔ XML: Designer-ის პაკეტური რეჟიმის გასაღებები, `ibcmd`, EDT `ring`, `precommit1c`/`vrunner`, Git-ის კონფიგურაცია, ხაფანგები და round-trip ტესტი |
 | [`references/worked-example-managed-form.md`](references/worked-example-managed-form.md) | სრული end-to-end მაგალითი: ობიექტის მოდული + მართვადი ფორმა + საერთო მოდული |
 | [`references/georgian-glossary.md`](references/georgian-glossary.md) | ქართული ტერმინოლოგია რუსული/ინგლისური კანონიკური ტერმინების გვერდით |
 
@@ -62,6 +64,7 @@ Claude დაიწყებს მეტამონაცემების �
 ```
 SKILL.md                     # სქილის ძირითადი ინსტრუქცია + frontmatter
 references/                  # თემატური საცნობარო ფაილები (საჭიროებისამებრ იტვირთება)
+scripts/                     # გასაშვები სკრიპტების შაბლონები კონვერტაციისთვის (.bat / .sh)
 1c-developer.skill           # შეფუთული ბანდლი განაწილებისთვის
 ```
 
