@@ -20,16 +20,18 @@ Set a lock when you read data that you will then modify, so another session cann
 
 ```bsl
 Блокировка = Новый БлокировкаДанных;
-Элемент = Блокировка.Добавить("РегистрНакопления.ТоварыНаСкладах.Остатки");
-Элемент.Режим = РежимБлокировкиДанных.Исключительный; // или Разделяемый для чтения
+// ბლოკირების სივრცე თვით რეგისტრია - არა ვირტუალური ცხრილი
+Элемент = Блокировка.Добавить("РегистрНакопления.ТоварыНаСкладах");
+Элемент.Режим = РежимБлокировкиДанных.Исключительный; // მხოლოდ წასაკითხად - Разделяемый
 Элемент.УстановитьЗначение("Склад", Склад);
-// можно ограничить набор по источнику данных (по таблице документа)
-Блокировка.Заблокировать(); // внутри транзакции!
+// ნაკრების შეზღუდვა მონაცემთა წყაროთიც შეიძლება (მაგ., დოკუმენტის ცხრილური ნაწილით)
+Блокировка.Заблокировать(); // მხოლოდ ტრანზაქციის შიგნით
 
-// ... теперь читаем остатки и формируем движения, зная, что данные стабильны ...
+// ... ამის შემდეგ ვკითხულობთ ნაშთებს და ვაფორმირებთ მოძრაობებს - მონაცემები აღარ შეიცვლება ...
 ```
 
 Key points:
+- The lock space is the **register itself**: `"РегистрНакопления.<Имя>"`. A virtual-table name is not a lock space — `"РегистрНакопления.ТоварыНаСкладах.Остатки"` fails at run time with «Неверное имя пространства блокировок».
 - A managed lock is only meaningful **inside a transaction**; it is released when the transaction ends.
 - Use `Разделяемый` (shared) when you only read and want to block writers; `Исключительный` (exclusive) when you will write.
 - Constrain the lock to the **specific dimensions/values** you touch (`УстановитьЗначение`) so you don't lock the whole register and serialize unrelated work.
@@ -54,13 +56,14 @@ Deadlocks happen when two transactions lock the same resources in opposite order
     ЗафиксироватьТранзакцию();
 Исключение
     ОтменитьТранзакцию();
-    ЗаписьЖурналаРегистрации(НСтр("ru='Транзакция'; ka='ტრანზაქცია'"),
+    ЗаписьЖурналаРегистрации(
+        НСтр("ru = 'Транзакция'; ka = 'ტრანზაქცია'", Метаданные.ОсновнойЯзык.КодЯзыка),
         УровеньЖурналаРегистрации.Ошибка, , , ПодробноеПредставлениеОшибки(ИнформацияОбОшибке()));
     ВызватьИсключение;
 КонецПопытки;
 ```
 
-Rules: every `НачатьТранзакцию` is paired with exactly one commit or rollback on every path; always roll back in the exception handler; don't nest business transactions casually (1C uses a transaction counter — inner "transactions" just increment it, so a single failure rolls back the whole outer scope). Don't perform interactive or long external operations inside a transaction.
+Rules: `НачатьТранзакцию()` stands immediately **before** `Попытка`, never inside it; every `НачатьТранзакцию` is paired with exactly one commit or rollback on every path; always roll back in the exception handler; don't nest business transactions casually (1C uses a transaction counter — inner "transactions" just increment it, so a single failure rolls back the whole outer scope). Don't perform interactive or long external operations inside a transaction.
 
 ## Document posting (ОбработкаПроведения)
 
@@ -68,16 +71,18 @@ Posting runs in the object module and writes register movements. The platform al
 
 ```bsl
 Процедура ОбработкаПроведения(Отказ, РежимПроведения)
-    // ქართული: მოძრაობების ფორმირება და ნაშთის შემოწმება
+    // მოძრაობების ფორმირება და ნაშთის კონტროლი
 
     Движения.ТоварыНаСкладах.Записывать = Истина;
+    // ... ნაკრების შევსება დოკუმენტის სტრიქონებით ...
 
-    // For balance control, set the register to read the locked balance:
+    // ჩაწერისას რეგისტრის ნაშთები იბლოკება, ამიტომ მათი შემდგომი წაკითხვა სანდოა
     Движения.ТоварыНаСкладах.БлокироватьДляИзменения = Истина;
-    Движения.Записать(); // записать движения, чтобы учесть их в остатках
+    Движения.Записать(); // მოძრაობები იწერება და ნაშთებში უკვე აისახება
 
-    // Затем проверить остатки запросом по таблице остатков и,
-    // при нехватке, установить Отказ = Истина и сообщить пользователю через НСтр.
+    // შემდეგ ვამოწმებთ, ხომ არ გახდა ნაშთი უარყოფითი (КоличествоОстаток < 0).
+    // მოძრაობები უკვე ჩაწერილია, ამიტომ შედარება „საჭირო > ნაშთი" რაოდენობას ორჯერ გამოაკლებდა.
+    // უარყოფითი ნაშთის შემთხვევაში: Отказ = Истина და შეტყობინება მომხმარებელს НСтр-ით.
 КонецПроцедуры
 ```
 

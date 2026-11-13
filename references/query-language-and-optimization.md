@@ -86,14 +86,14 @@ Indexing a temp table you will join on (`ИНДЕКСИРОВАТЬ ПО`) helps
 7. **Prefer `ОБЪЕДИНИТЬ ВСЕ`** over `ОБЪЕДИНИТЬ` unless de-duplication is required.
 8. **Join on indexed/typed fields**; beware joins on fields of composite (составной) type, which are slow — narrow the type first.
 9. **Watch `.Ссылка.Реквизит` dotted access** through references in filters; for hot paths, join the referenced table explicitly so the optimizer can use indexes.
-10. **Use temp tables** to break up heavy nested subqueries and to constrain virtual tables by a pre-filtered set.
+10. **Use temp tables** to break up heavy nested subqueries and to constrain virtual tables by a pre-filtered set. Don't join a virtual table (`.Остатки`, `.Обороты`, `.СрезПоследних`) directly — put its result into a temp table first and join that; the 1C standards advise against direct joins with virtual tables, and bsl-language-server reports them as `JoinWithVirtualTable`.
 
 ## Anti-patterns to avoid
 
 **Query in a loop (запрос в цикле) — never do this:**
 
 ```bsl
-// ❌ executes one query per row — catastrophic on volume
+// ❌ executes one query per row - catastrophic on volume
 Для Каждого Стр Из Товары Цикл
     Запрос = Новый Запрос("ВЫБРАТЬ Цена ИЗ РегистрСведений.Цены.СрезПоследних(&Д, Номенклатура=&Н)");
     Запрос.УстановитьПараметр("Н", Стр.Номенклатура);

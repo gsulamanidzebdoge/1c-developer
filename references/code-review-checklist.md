@@ -29,11 +29,16 @@ Use this when the user asks you to **review, audit, or critique existing 1C code
 - Is `&НаСервереБезКонтекста` used where form context isn't needed (cheaper), instead of `&НаСервере`?
 - Are there server round-trips **inside a loop**? Batch them into one call.
 - Is whole-object data shuttled across the client/server boundary when a few values would do?
+- Server-call parameters not declared `Знач`, while form data (`Объект.Товары`) is passed → «Нельзя изменять поле, содержащее объект данных формы» at run time (🔴).
+- `ТаблицаЗначений` / `ДеревоЗначений` returned to the client → «Отсутствует отображение для типа ValueTable» on the thin and web client (🔴). Return an array of structures.
 
 ### 3. Concurrency, transactions, posting
 - Read-then-write on balances **without a managed lock** → race condition (🔴). See `locking-transactions-posting.md`.
 - Every `НачатьТранзакцию` paired with commit/rollback on all paths? Rollback in the exception handler?
 - Locks acquired in a consistent order (deadlock risk)? Lock scope narrowed to the dimensions touched?
+- Lock space named after a virtual table (`"РегистрНакопления.Х.Остатки"`) instead of the register (`"РегистрНакопления.Х"`) → «Неверное имя пространства блокировок» on every run (🔴).
+- Balance checked *after* `Движения.Х.Записать()` by comparing required > balance → the document's own quantity is subtracted twice and valid postings are refused (🔴). After the write, check for a negative balance.
+- `НачатьТранзакцию()` inside `Попытка` instead of immediately before it?
 - Posting (`ОбработкаПроведения`): movements formed set-based and idempotently? Balance control matches the chosen proactive/retrospective strategy?
 - Slow/external/interactive work inside a transaction → flag it.
 
@@ -59,10 +64,12 @@ Use this when the user asks you to **review, audit, or critique existing 1C code
 - Query text built by concatenating user/external input instead of `УстановитьПараметр`? → injection (🔴).
 - Unjustified privileged mode bypassing RLS?
 - `РАЗРЕШЕННЫЕ` used appropriately when RLS is in play?
-- Secrets/tokens hardcoded instead of `БезопасноеХранилище`?
+- Secrets/tokens hardcoded instead of the БСП safe storage (`ОбщегоНазначения.ЗаписатьДанныеВБезопасноеХранилище`)?
+- External JSON read with `ПрочитатьJSON(Чтение)` into `Структура`, so a key like `order-id` crashes the import? Pass `Истина` for `Соответствие`.
 
 ### 8. Localization & UX
-- User-facing strings hardcoded instead of `НСтр(...)` with a `ka` variant?
+- User-facing strings hardcoded instead of `НСтр(...)` with a `ka` variant? A string without a `ka` variant is shown to a Georgian-language user as an empty string.
+- Event-log event names built with `НСтр` but without the main-language code as the second argument (one event split into several names)?
 - Modal/synchronous dialogs (`Предупреждение`, `Вопрос`) in code meant for the web client, instead of the async `ПоказатьПредупреждение`/`ПоказатьВопрос` or `Асинх/Ждать` model? See `development-standards.md`.
 
 ### 9. Extensions (if reviewing an extension)

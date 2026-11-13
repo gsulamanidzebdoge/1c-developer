@@ -16,7 +16,7 @@
 
 ### ინსტრუმენტარიუმი: cc-1c-skills
 
-სქილი იცნობს [cc-1c-skills](https://github.com/Nikolay-Shirokov/cc-1c-skills) პლაგინს (Nikolay Shirokov, MIT — 80 სქილი 1C-ის XML-ფორმატებისა და კონფიგურატორის CLI-ზე) და, როცა ის დაინსტალირებულია, **რეალურ არტეფაქტებს მისი სქილებით აგებს** — არ წერს XML-ს ხელით და არ აწყობს `1cv8.exe`-ის ბრძანებებს თვითონ.
+სქილი იცნობს [cc-1c-skills](https://github.com/Nikolay-Shirokov/cc-1c-skills) პლაგინს (Nikolay Shirokov, MIT — დაახლოებით 80 სქილი 1C-ის XML-ფორმატებისა და კონფიგურატორის CLI-ზე) და, როცა ის დაინსტალირებულია, **რეალურ არტეფაქტებს მისი სქილებით აგებს** — არ წერს XML-ს ხელით და არ აწყობს `1cv8.exe`-ის ბრძანებებს თვითონ.
 
 შრომის განაწილება ასეთია: **cc-1c-skills** აგებს არტეფაქტის მექანიკას (UUID-ები, namespace-ები, `Configuration.xml`-ში რეგისტრაცია, პლატფორმის გაშვება), **`1c-developer`** — მეტამონაცემების დიზაინს, მოდულებში ჩაწერილ BSL-ს, ქართულ ახსნას და ტესტირების გეგმას. პლაგინის გარეშე სქილი არსებულ რეჟიმში აგრძელებს — აძლევს მზა, გასაშვებ სკრიპტს.
 
@@ -56,14 +56,24 @@
 | [`references/integration-and-exchange.md`](references/integration-and-exchange.md) | HTTP/web სერვისები, REST, JSON/XML/XDTO, EnterpriseData, გაცვლის გეგმები, იდემპოტენტურობა |
 | [`references/platform-mechanisms.md`](references/platform-mechanisms.md) | ფონური და რეგლამენტური დავალებები, `ДлительныеОперации`, ფუნქციონალური ოფციები, დინამიკური სიები, უფლებები და RLS |
 | [`references/code-review-checklist.md`](references/code-review-checklist.md) | Review-რეჟიმის სრული ჩეკლისტი და ქართული ანგარიშის შაბლონი |
-| [`references/cc-1c-skills-integration.md`](references/cc-1c-skills-integration.md) | cc-1c-skills პლაგინი: აღმოჩენა, 80 სქილის კატალოგი, `.v8-project.json` რეესტრი, ტიპური ჯაჭვები, ხაფანგები და fallback |
+| [`references/cc-1c-skills-integration.md`](references/cc-1c-skills-integration.md) | cc-1c-skills პლაგინი: აღმოჩენა, სქილების კატალოგი, `.v8-project.json` რეესტრი, ტიპური ჯაჭვები, ხაფანგები და fallback |
 | [`references/source-conversion.md`](references/source-conversion.md) | `.erf`/`.epf`/`.cf`/`.cfe` ↔ XML: Designer-ის პაკეტური რეჟიმის გასაღებები, `ibcmd`, EDT `ring`, `precommit1c`/`vrunner`, Git-ის კონფიგურაცია, ხაფანგები და round-trip ტესტი |
 | [`references/worked-example-managed-form.md`](references/worked-example-managed-form.md) | სრული end-to-end მაგალითი: ობიექტის მოდული + მართვადი ფორმა + საერთო მოდული |
 | [`references/georgian-glossary.md`](references/georgian-glossary.md) | ქართული ტერმინოლოგია რუსული/ინგლისური კანონიკური ტერმინების გვერდით |
 
 ## ინსტალაცია
 
-### Claude Code
+### Claude Code — პლაგინად (რეკომენდებული)
+
+```
+/plugin marketplace add gsulamanidzebdoge/1c-developer
+/plugin install 1c-developer@gsulamanidze-skills
+/plugin install product-analyst@gsulamanidze-skills   # არჩევითი: ТЗ, ЧТЗ, FIT/GAP, ბექლოგი
+```
+
+ერთი marketplace — `gsulamanidze-skills` — ორივე პლაგინს შეიცავს. `product-analyst`-ის რეპოზიტორიიდან დამატებული marketplace იგივე სახელითა და იგივე სიით მოდის, ამიტომ საკმარისია ერთ-ერთის დამატება.
+
+### Claude Code — სქილად
 
 ```bash
 git clone https://github.com/gsulamanidzebdoge/1c-developer.git ~/.claude/skills/1c-developer
@@ -74,6 +84,8 @@ git clone https://github.com/gsulamanidzebdoge/1c-developer.git ~/.claude/skills
 ### Claude Desktop / API
 
 ატვირთეთ `1c-developer.skill` ბანდლი (იგივე შიგთავსი, შეფუთული) Skills-ის ინტერფეისიდან.
+
+ბანდლი სამუშაო ხიდან ეწყობა: `python tools/build-skill-bundle.py`. სკრიპტი ამოწმებს, რომ `plugin.json`-ისა და `marketplace.json`-ის ვერსია ერთმანეთს ემთხვევა და `description` 1024 სიმბოლოს არ აღემატება, ხოლო `.bat`-ებს CRLF-ით ფუთავს.
 
 ## გამოყენების მაგალითი
 
@@ -90,6 +102,7 @@ Claude დაიწყებს მეტამონაცემების �
 SKILL.md                     # სქილის ძირითადი ინსტრუქცია + frontmatter
 references/                  # თემატური საცნობარო ფაილები (საჭიროებისამებრ იტვირთება)
 scripts/                     # გასაშვები სკრიპტების შაბლონები კონვერტაციისთვის (.bat / .sh)
+tools/build-skill-bundle.py  # ბანდლის აწყობა და რელიზის შემოწმებები
 1c-developer.skill           # შეფუთული ბანდლი განაწილებისთვის
 ```
 

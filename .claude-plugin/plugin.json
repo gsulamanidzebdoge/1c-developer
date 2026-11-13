@@ -1,7 +1,7 @@
 {
   "name": "1c-developer",
   "displayName": "1C Developer",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Expert 1C:Enterprise 8.3 (1С:Предприятие) developer and architect. Writes standard-compliant BSL, reviews code, and drives the cc-1c-skills toolchain for metadata, forms, СКД, extensions and .erf/.epf/.cf/.cfe source conversion — explaining in Georgian.",
   "author": {
     "name": "George Sulamanidze",
