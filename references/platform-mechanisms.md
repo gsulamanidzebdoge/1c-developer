@@ -18,7 +18,7 @@ The platform rule of thumb: **any server call that can run longer than ~8 second
 - **Регламентное задание (scheduled job)** — a recurring task on a schedule (nightly close, periodic sync). Always pair it with a **predefined** scheduled job and run the body in a common module so it is testable on demand.
 
 ```bsl
-// запуск фоновой задачи (low-level): менеджер ФоновыеЗадания, метод Выполнить
+// low-level launch: the ФоновыеЗадания manager, method Выполнить
 Параметры = Новый Массив;
 Параметры.Добавить(ПараметрыОперации);
 ФоновыеЗадания.Выполнить("МойМодуль.ПересчитатьСебестоимость", Параметры, ,
@@ -34,23 +34,41 @@ Scheduled-job discipline: make the body **idempotent and restartable** (it may o
 For an interactive heavy action, don't freeze the form. Use the БСП **ДлительныеОперации** subsystem: start the work in a background job on the server, then let the client poll for completion and progress (the familiar progress window). This is the standard pattern in modern typical configurations.
 
 ```bsl
-&НаСервере
-Процедура ЗапуститьРасчетНаСервере()
-    // ქართული: ფონური დავალების გაშვება БСП-ს ДлительныеОперации-ით
-    ПараметрыВыполнения = ДлительныеОперации.ПараметрыВыполненияВФоне(УникальныйИдентификатор);
-    ПараметрыВыполнения.НаименованиеФоновогоЗадания = НСтр("ru = 'Расчёт себестоимости'; ka = 'თვითღირებულების გამოთვლა'");
-    ЗаданиеОписание = ДлительныеОперации.ВыполнитьВФоне("Расчеты.ПересчитатьСебестоимость", ПараметрыМетода, ПараметрыВыполнения);
+&НаКлиенте
+Процедура ПересчитатьСебестоимость(Команда)
+    // გაშვება სერვერზე, ლოდინი კლიენტზე - ფორმა არ იყინება
+    ДлительнаяОперация = ЗапуститьПересчетНаСервере();
+    ПараметрыОжидания = ДлительныеОперацииКлиент.ПараметрыОжидания(ЭтотОбъект);
+    ДлительныеОперацииКлиент.ОжидатьЗавершение(ДлительнаяОперация,
+        Новый ОписаниеОповещения("ПослеПересчетаСебестоимости", ЭтотОбъект), ПараметрыОжидания);
 КонецПроцедуры
 
+&НаСервере
+Функция ЗапуститьПересчетНаСервере()
+    // ფონში სრულდება Расчеты.ПересчитатьСебестоимость(Параметры, АдресРезультата) Экспорт
+    ПараметрыПроцедуры = Новый Структура("Период", Период);
+    ПараметрыВыполнения = ДлительныеОперации.ПараметрыВыполненияВФоне(УникальныйИдентификатор);
+    ПараметрыВыполнения.НаименованиеФоновогоЗадания =
+        НСтр("ru = 'Пересчёт себестоимости'; ka = 'თვითღირებულების გადაანგარიშება'");
+    Возврат ДлительныеОперации.ВыполнитьВФоне(
+        "Расчеты.ПересчитатьСебестоимость", ПараметрыПроцедуры, ПараметрыВыполнения);
+КонецФункции
+
 &НаКлиенте
-Процедура ПослеЗапускаДлительнойОперации(Задание) Экспорт
-    // ожидаем завершения; платформа покажет индикатор
-    ОжиданиеЗавершения = ДлительныеОперацииКлиент.ПараметрыОжиданияЗавершения(ЭтотОбъект);
-    ДлительныеОперацииКлиент.ОжидатьЗавершение(Задание, Новый ОписаниеОповещения("ПриЗавершенииРасчета", ЭтотОбъект), ОжиданиеЗавершения);
+Процедура ПослеПересчетаСебестоимости(Результат, ДополнительныеПараметры) Экспорт
+    Если Результат = Неопределено Тогда
+        Возврат; // მომხმარებელმა ოპერაცია გააუქმა
+    КонецЕсли;
+    Если Результат.Статус = "Ошибка" Тогда
+        ВызватьИсключение Результат.КраткоеПредставлениеОшибки;
+    КонецЕсли;
+    // Статус = "Выполнено": შედეგი დროებით საცავშია, მისამართით Результат.АдресРезультата
 КонецПроцедуры
 ```
 
-Report progress from inside the job with `ДлительныеОперации.СообщитьПрогресс`, read it on the client with `ПрочитатьПрогресс`. Surface the final result (or error) to the user with a clear localized message.
+The server function must **return** what `ВыполнитьВФоне` gives back (a structure with `Статус`, `ИдентификаторЗадания`, `АдресРезультата`, error texts) — the client hands exactly that structure to `ОжидатьЗавершение`. Report progress from inside the job with `ДлительныеОперации.СообщитьПрогресс`; to show it, set `ПараметрыОжидания.ВыводитьПрогрессВыполнения = Истина` before waiting (`ДлительныеОперации.ПрочитатьПрогресс` is the server-side reader). Surface the final result (or error) to the user with a clear localized message.
+
+The subsystem's API moves between БСП versions: БСП 2.2 has only `ВыполнитьВФоне`, while 3.x adds `ДлительныеОперации.ВыполнитьФункцию` / `ВыполнитьПроцедуру`. Read the export list of `ДлительныеОперации` and `ДлительныеОперацииКлиент` in the configuration at hand before relying on a name.
 
 ## Functional options (функциональные опции)
 
@@ -67,9 +85,10 @@ This keeps optional functionality declarative and avoids dead UI for customers w
 A **подписка на события** attaches a handler in a common (server) module to events of many objects at once (e.g., `ПередЗаписью` of every document of certain types) **without** editing each object module. Ideal for cross-cutting rules (audit stamping, denormalized field maintenance) and for extensions that must react to base objects.
 
 ```bsl
-// общий модуль "ПодпискиСобытий", серверный
+// common module "ПодпискиСобытий" (server); the subscription source here is catalogs.
+// A document's ПередЗаписью handler takes (Источник, Отказ, РежимЗаписи, РежимПроведения)
 Процедура ПроставитьАвтораПередЗаписью(Источник, Отказ) Экспорт
-    // ქართული: ერთიანი წესი — ავტორის ჩაწერა ყველა გამოწერილ ობიექტზე
+    // ერთიანი წესი - ავტორის ჩაწერა ყველა გამოწერილ ობიექტზე
     Если Источник.ЭтоНовый() Тогда
         Источник.Автор = Пользователи.ТекущийПользователь();
     КонецЕсли;

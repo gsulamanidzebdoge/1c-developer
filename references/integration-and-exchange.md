@@ -26,9 +26,9 @@ Prefer REST + JSON for new external integrations; reserve SOAP/WS for counterpar
 An **HTTP service** maps URL templates + methods (GET/POST/...) to handler functions in the service module. Keep handlers thin: validate input, delegate to a common module, return a typed response.
 
 ```bsl
-// HTTP-сервис "ОбменЗаказами", шаблон "/orders", метод POST
+// HTTP service "ОбменЗаказами", URL template "/orders", method POST
 Функция СоздатьЗаказПриPOST(Запрос)
-    // ქართული: სხეულის წაკითხვა და დელეგირება — ლოგიკა საერთო მოდულშია
+    // სხეულის წაკითხვა და დელეგირება - ლოგიკა საერთო მოდულშია
     ТелоПотока = Запрос.ПолучитьТелоКакСтроку();
     Результат = ИнтеграцияЗаказов.СоздатьЗаказИзJSON(ТелоПотока); // returns structure
 
@@ -55,14 +55,16 @@ A **web service (SOAP)** is similar but contract-first (WSDL, XDTO types). Use i
 Попытка
     Ответ = Соединение.ОтправитьДляОбработки(Запрос); // POST
 Исключение
-    // ქართული: ქსელის შეცდომა — ჟურნალში ჩაწერა და გასაგები შეტყობინება
-    ЗаписьЖурналаРегистрации(НСтр("ru = 'Интеграция: вызов API'; ka = 'ინტეგრაცია: API გამოძახება'"),
+    // ქსელის შეცდომა - ჟურნალში ჩაწერა და გასაგები შეტყობინება.
+    // მოვლენის სახელი კონფიგურაციის ძირითად ენაზეა და არა მომხმარებლის ენაზე
+    ЗаписьЖурналаРегистрации(
+        НСтр("ru = 'Интеграция: вызов API'; ka = 'ინტეგრაცია: API გამოძახება'", Метаданные.ОсновнойЯзык.КодЯзыка),
         УровеньЖурналаРегистрации.Ошибка, , , ПодробноеПредставлениеОшибки(ИнформацияОбОшибке()));
     ВызватьИсключение НСтр("ru = 'Сервис недоступен, повторите позже'; ka = 'სერვისი მიუწვდომელია, სცადეთ მოგვიანებით'");
 КонецПопытки;
 
 Если Ответ.КодСостояния >= 400 Тогда
-    // ქართული: დაამუშავე HTTP შეცდომის სტატუსი ცალკე — 2xx არ არის წარმატების გარანტია
+    // HTTP შეცდომის სტატუსი ცალკე დაამუშავე - გამონაკლისის არარსებობა წარმატებას არ ნიშნავს
 КонецЕсли;
 ```
 
@@ -74,7 +76,9 @@ Always set a timeout, use TLS (`ЗащищенноеСоединениеOpenSSL`
 // Parse
 Чтение = Новый ЧтениеJSON;
 Чтение.УстановитьСтроку(ТелоJSON);
-Данные = ПрочитатьJSON(Чтение); // -> Соответствие/Массив of primitives
+// Истина -> Соответствие. ნაგულისხმევად ПрочитатьJSON Структура-ს აბრუნებს, რომელიც გასაღებს
+// "order-id" ვერ იტევს: „Недопустимое имя свойства: 'order-id' для чтения JSON в объект Структура"
+Данные = ПрочитатьJSON(Чтение, Истина); // -> Соответствие / Массив
 Чтение.Закрыть();
 
 // Build
@@ -83,6 +87,8 @@ Always set a timeout, use TLS (`ЗащищенноеСоединениеOpenSSL`
 ЗаписатьJSON(Запись, Данные);
 Строка = Запись.Закрыть();
 ```
+
+`ПрочитатьJSON(Чтение)` without the second argument reads objects into `Структура`, and any key that is not a valid 1C identifier (`order-id`, `2fa`, a key with a space) raises an error — so for JSON from outside always pass `Истина` and get `Соответствие`. Keep `Структура` for JSON you produce yourself.
 
 For 1C objects, `СериализаторXDTO` converts a value (structure, value table, even some platform objects) to/from JSON/XML in one step. Map external JSON to your own structures explicitly rather than assuming field names — external contracts change. Convert string keys to typed values (dates, numbers, references) defensively, with try/except around parsing of untrusted input.
 
@@ -107,7 +113,7 @@ Choose this route whenever the data being exchanged maps onto recognizable busin
 
 - **Idempotency.** Assume messages can be re-delivered. Key inbound records by an external id and upsert (find-or-create) rather than blindly inserting, so a retry does not create duplicates. Exchange-plan message numbering/confirmation gives this for 1C↔1C; for external APIs, store the external id on your object.
 - **Restartability.** Process exchange in a background job; record progress so an interrupted run resumes instead of restarting. Commit in reasonable batches, not one giant transaction.
-- **Validation & security.** Treat all inbound data as untrusted: validate types and references, wrap parsing in try/except, and never build queries by concatenating incoming strings — use parameters. Authenticate callers; store tokens/passwords in safe storage (`БезопасноеХранилище`), never hardcoded.
+- **Validation & security.** Treat all inbound data as untrusted: validate types and references, wrap parsing in try/except, and never build queries by concatenating incoming strings — use parameters. Authenticate callers; store tokens/passwords in the БСП safe storage (`ОбщегоНазначения.ЗаписатьДанныеВБезопасноеХранилище` / `ПрочитатьДанныеИзБезопасногоХранилища`), never hardcoded.
 - **Logging.** Log every exchange with enough context (direction, node, message number, counts) to diagnose a failure, and surface user-facing errors via `НСтр` with a Georgian variant.
 
 ## Where the heavy work belongs

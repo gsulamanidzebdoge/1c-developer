@@ -44,7 +44,7 @@ Pattern: a client command handler does a quick UI check, calls a `&НаСерв�
 &НаКлиенте
 Процедура РассчитатьИтог(Команда)
     Если НЕ ЗначениеЗаполнено(Объект.Контрагент) Тогда
-        // ქართული: ჯერ უნდა შეივსოს კონტრაგენტი
+        // ჯერ უნდა შეივსოს კონტრაგენტი
         ПоказатьПредупреждение(, НСтр("ru = 'Заполните контрагента'; ka = 'შეავსეთ კონტრაგენტი'"));
         Возврат;
     КонецЕсли;
@@ -52,11 +52,15 @@ Pattern: a client command handler does a quick UI check, calls a `&НаСерв�
 КонецПроцедуры
 
 &НаСервереБезКонтекста
-Функция РассчитатьИтогНаСервере(Контрагент, Дата)
-    // ქართული: სერვერული გამოთვლა კონტექსტის გადატანის გარეშე — იაფი გამოძახება
+Функция РассчитатьИтогНаСервере(Знач Контрагент, Знач Дата)
+    // სერვერული გამოთვლა კონტექსტის გადატანის გარეშე - იაფი გამოძახება
     Возврат РасчетыСервер.ИтогПоКонтрагенту(Контрагент, Дата);
 КонецФункции
 ```
+
+Two rules for anything that crosses the client/server boundary:
+- **Declare server-call parameters `Знач`.** Parameters are passed by reference by default, and the platform copies them back to the client after the call — extra traffic, and when the argument is form data (`Объект.Товары`) the copy-back fails with «Нельзя изменять поле, содержащее объект данных формы».
+- **Return only types the client has**: primitives, references, `Структура`, `Массив`, `Соответствие`. The thin and web clients have no `ТаблицаЗначений` or `ДеревоЗначений`; returning one fails with «Ошибка отображения типов: Отсутствует отображение для типа ValueTable». Convert to an array of structures on the server.
 
 ## Common module flags
 
@@ -115,15 +119,15 @@ For object/common modules: public (exported) interface first, then private helpe
 Wrap operations that can fail (queries against external systems, file/HTTP work, transactions, type conversions on user input) and handle the error meaningfully:
 
 ```bsl
+НачатьТранзакцию();
 Попытка
-    НачатьТранзакцию();
-    // ... работа ...
+    // ... სამუშაო, რომელიც ატომურად უნდა შესრულდეს ...
     ЗафиксироватьТранзакцию();
 Исключение
     ОтменитьТранзакцию();
     ИнфОшибки = ИнформацияОбОшибке();
     ЗаписьЖурналаРегистрации(
-        НСтр("ru = 'Проведение документа'; ka = 'დოკუმენტის გატარება'"),
+        НСтр("ru = 'Проведение документа'; ka = 'დოკუმენტის გატარება'", Метаданные.ОсновнойЯзык.КодЯзыка),
         УровеньЖурналаРегистрации.Ошибка, , ,
         ПодробноеПредставлениеОшибки(ИнфОшибки));
     ВызватьИсключение НСтр("ru = 'Не удалось провести документ. Подробности в журнале регистрации.';
@@ -131,7 +135,11 @@ Wrap operations that can fail (queries against external systems, file/HTTP work,
 КонецПопытки;
 ```
 
-Rules: always roll back the transaction in the handler; log technical detail via `ЗаписьЖурналаРегистрации`; show the user a clear, localized, non-technical message; never leave an empty `Исключение` block that hides the failure.
+Rules:
+- `НачатьТранзакцию()` stands immediately **before** `Попытка`, never inside it — otherwise a failure of `НачатьТранзакцию` itself sends the handler to roll back a transaction that never started, and that second error hides the first.
+- Always roll back the transaction in the handler.
+- Log technical detail via `ЗаписьЖурналаРегистрации`. Name the event in the configuration's **main language** — the second argument of `НСтр` (`Метаданные.ОсновнойЯзык.КодЯзыка` on the server; БСП: `ОбщегоНазначения.КодОсновногоЯзыка()` in 3.x, `ОбщегоНазначенияКлиентСервер.КодОсновногоЯзыка()` in 2.x). Without it the event name follows each user's language, one event is logged under several names, and filtering the event log by event breaks.
+- Show the user a clear, localized, non-technical message; never leave an empty `Исключение` block that hides the failure.
 
 ## Localizable strings with НСтр (including Georgian)
 
@@ -142,6 +150,8 @@ Every user-facing literal goes through `НСтр` (NStr) with language codes, so
 ```
 
 Use the multi-line `|` continuation for longer strings. This is the mechanism that lets the 1C UI speak Georgian — relying on it is what makes "Georgian UI support" real rather than a one-off hardcode.
+
+A string with no variant for the session's language comes back **empty**: for a user working in Georgian, `НСтр("ru = 'Документ проведён'")` returns `""`, and the user sees a blank message. So the `ka` variant is not a courtesy — leaving it out blanks the text. The same applies when you pass a language code explicitly: `НСтр("ru = '…'", "ka")` is also empty. Check which languages the configuration actually has (`Метаданные.Языки`) and which one is main — in a Georgian 1С:ERP base the main language can itself be `ka`.
 
 ## Avoiding hardcoded values
 
@@ -154,24 +164,24 @@ Replace magic literals with first-class metadata:
 
 ## Asynchronous client model (Асинх/Ждать) and modal deprecation
 
-The managed/web client **cannot block the UI thread**, so the old synchronous interactive methods — `Вопрос()`, `Предупреждение()`, `ВвестиЧисло/ВвестиСтроку/ВвестиДату()`, `ОткрытьФормуМодально()` — are **deprecated** and throw or misbehave in the web client. Never write them in new client code. There are two non-blocking replacements; prefer the second for anything new:
+The managed/web client **cannot block the UI thread**, so the old synchronous interactive methods — `Вопрос()`, `Предупреждение()`, `ВвестиЧисло/ВвестиСтроку/ВвестиДату()`, `ОткрытьФормуМодально()` — are **deprecated**. Whether they still run depends on the configuration property «Режим использования модальности»: with «Не использовать» they raise an error at run time; with «Использовать» they still work (older typical configurations such as 1С:ERP 2.0 can still ship this way). Either way, never write them in new client code. There are two non-blocking replacements; prefer the second for anything new:
 
 1. **Callback style (`ОписаниеОповещения`)** — the original non-modal mechanism: you pass a handler that the platform calls when the user responds. Still valid, but it fragments logic across procedures.
-2. **Async/await (`Асинх` / `Ждать`, platform 8.3.18+)** — the modern, preferred style. Mark the procedure/function `Асинх`; call an async method with `Ждать` and write linear code. An `Асинх` function returns an `Обещание` (Promise); `Ждать` suspends until it resolves. Use the `*Асинх` method variants: `ВопросАсинх`, `ПредупреждениеАсинх`, `ОткрытьФормуАсинх`, `ПоказатьВводЧислаАсинх`, etc. (English syntax: `Async` / `Await`.)
+2. **Async/await (`Асинх` / `Ждать`, platform 8.3.18+)** — the modern, preferred style. Mark the procedure/function `Асинх`; call an async method with `Ждать` and write linear code. An `Асинх` function returns an `Обещание` (Promise); `Ждать` suspends until it resolves. Use the `*Асинх` method variants: `ВопросАсинх`, `ПредупреждениеАсинх`, `ВвестиЧислоАсинх`, `ВвестиСтрокуАсинх`, `ВвестиДатуАсинх`, etc. (English syntax: `Async` / `Await`.) Not every method has an async twin: there is no `ОткрытьФормуАсинх` and no `ПоказатьВводЧислаАсинх` — forms still open with `ОткрытьФорму(...)` plus an `ОписаниеОповещения` for the close event. An unknown name is a compile error («Процедура или функция с указанным именем не определена»), so a syntax check catches an invented one.
 
 ```bsl
-// ❌ deprecated for the web client — blocks the UI
+// ❌ deprecated for the web client - blocks the UI
 Ответ = Вопрос(НСтр("ru = 'Провести документ?'; ka = 'გავატარო დოკუმენტი?'"), РежимДиалогаВопрос.ДаНет);
 Если Ответ = КодВозвратаДиалога.Да Тогда // ...
 
-// ✅ modern: Асинх + Ждать — линейно, без блокировки интерфейса
+// ✅ modern: Асинх + Ждать - linear code, the UI is not blocked
 &НаКлиенте
 Асинх Процедура ПровестиВыполнить(Команда)
     Ответ = Ждать ВопросАсинх(
         НСтр("ru = 'Провести документ?'; ka = 'გავატარო დოკუმენტი?'"),
         РежимДиалогаВопрос.ДаНет);
     Если Ответ = КодВозвратаДиалога.Да Тогда
-        // ქართული: დადასტურების შემდეგ — სერვერული გამოძახება
+        // დადასტურების შემდეგ - სერვერული გამოძახება
         ПровестиНаСервере();
     КонецЕсли;
 КонецПроцедуры
@@ -185,16 +195,18 @@ Before writing a helper, check whether the platform or Библиотека ст
 
 ## Common БСП modules cheat sheet
 
-The exact procedure names and module set depend on the deployed БСП (SSL) version — verify against the configuration in hand — but these are the modules you reach for most. Prefer them over re-implementing equivalents.
+The exact procedure names and module set depend on the deployed БСП (SSL) version — read it with `СтандартныеПодсистемыСервер.ВерсияБиблиотеки()` and check the export list of the module in the configuration at hand — but these are the modules you reach for most. Prefer them over re-implementing equivalents.
 
 | Module | Use for |
 |---|---|
-| `ОбщегоНазначения` / `...Клиент` / `...КлиентСервер` | Everyday utilities: `ЗначениеРеквизитаОбъекта`, `ЗначенияРеквизитовОбъекта` (batch — avoids per-attribute reads), `СообщитьПользователю`, structure/table helpers, current-date helpers |
+| `ОбщегоНазначения` / `...Клиент` / `...КлиентСервер` | Everyday utilities: `ЗначениеРеквизитаОбъекта`, `ЗначенияРеквизитовОбъекта` (batch — avoids per-attribute reads), `СообщитьПользователю` (in `...КлиентСервер`), `ТаблицаЗначенийВМассив`, structure/table helpers, current-date helpers |
+| `ОбщегоНазначения.ХранилищеОбщихНастроекСохранить` / `...Загрузить` | Saved user and form settings |
+| `ОбщегоНазначения.ЗаписатьДанныеВБезопасноеХранилище` / `ПрочитатьДанныеИзБезопасногоХранилища` | Passwords and tokens — never in code, constants or ordinary attributes |
 | `ДлительныеОперации` / `ДлительныеОперацииКлиент` | Run heavy work in a background job with a progress window (see `platform-mechanisms.md`) |
 | `Пользователи` / `ПользователиКлиент` | Current user, admin checks, rights |
 | `УправлениеДоступом` | Access groups, profiles, RLS value sets — work through this, not ad-hoc role logic |
-| `РаботаСФайлами` / `ХранилищеНастроек` helpers | Files, temp storage, saved form/user settings |
-| `ЭлектроннаяПочта` / `ОтправкаСМS` | Outbound email / SMS |
+| `РаботаСФайлами` | Attached files, temp storage |
+| `РаботаСПочтовымиСообщениями` / `ОтправкаSMS` | Outbound email / SMS |
 | `ОбновлениеИнформационнойБазы` | Data-fill handlers that run on configuration update |
 | `СтроковыеФункцииКлиентСервер` | String formatting beyond `СтрШаблон` (e.g., parametrized templates) |
 
